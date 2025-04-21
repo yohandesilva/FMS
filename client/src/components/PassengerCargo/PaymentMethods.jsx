@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const PaymentMethod = () => {
-  const [selectedMethod, setSelectedMethod] = useState('credit-card');
+  const location = useLocation();
+  const { flightPrice = 0, seatFee = 0 } = location.state || {}; // Get flight price and seat fee from state
+
+  const [selectedMethod, setSelectedMethod] = useState("credit-card");
   const [cardDetails, setCardDetails] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: ''
+    cardNumber: "",
+    cardName: "",
+    expiryDate: "",
+    cvv: "",
   });
   const [saveCard, setSaveCard] = useState(false);
-  const [paymentAmount] = useState(140000.00); // Example amount
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Calculate total payment amount
+  const totalPayment = flightPrice + seatFee;
 
   const handleMethodChange = (method) => {
     setSelectedMethod(method);
@@ -19,9 +25,9 @@ const PaymentMethod = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCardDetails(prev => ({
+    setCardDetails((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     setPaymentSuccess(false);
   };
@@ -42,37 +48,45 @@ const PaymentMethod = () => {
             <h2 className="text-2xl font-bold text-gray-800">Payment Method</h2>
             <div className="bg-blue-100 px-4 py-2 rounded-lg">
               <span className="text-sm text-gray-600">Total:</span>
-              <span className="ml-2 font-bold text-lg text-blue-600">Rs{paymentAmount.toFixed(2)}</span>
+              <span className="ml-2 font-bold text-lg text-blue-600">Rs {totalPayment.toFixed(2)}</span>
             </div>
           </div>
-          
+
           {/* Payment Method Selection */}
           <div className="mb-8">
             <h3 className="text-lg font-medium text-gray-700 mb-4">Select Payment Method</h3>
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
               <button
-                onClick={() => handleMethodChange('credit-card')}
-                className={`p-4 border rounded-lg transition-all ${selectedMethod === 'credit-card' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-300'}`}
+                onClick={() => handleMethodChange("credit-card")}
+                className={`p-4 border rounded-lg transition-all ${
+                  selectedMethod === "credit-card" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-300"
+                }`}
               >
                 <div className="flex items-center">
-                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${selectedMethod === 'credit-card' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
-                    {selectedMethod === 'credit-card' && (
-                      <div className="w-3 h-3 rounded-full bg-white"></div>
-                    )}
+                  <div
+                    className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${
+                      selectedMethod === "credit-card" ? "border-blue-500 bg-blue-500" : "border-gray-400"
+                    }`}
+                  >
+                    {selectedMethod === "credit-card" && <div className="w-3 h-3 rounded-full bg-white"></div>}
                   </div>
                   <span className="font-medium">Credit/Debit Card</span>
                 </div>
               </button>
-              
+
               <button
-                onClick={() => handleMethodChange('paypal')}
-                className={`p-4 border rounded-lg transition-all ${selectedMethod === 'paypal' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-300'}`}
+                onClick={() => handleMethodChange("paypal")}
+                className={`p-4 border rounded-lg transition-all ${
+                  selectedMethod === "paypal" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-300"
+                }`}
               >
                 <div className="flex items-center">
-                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${selectedMethod === 'paypal' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
-                    {selectedMethod === 'paypal' && (
-                      <div className="w-3 h-3 rounded-full bg-white"></div>
-                    )}
+                  <div
+                    className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${
+                      selectedMethod === "paypal" ? "border-blue-500 bg-blue-500" : "border-gray-400"
+                    }`}
+                  >
+                    {selectedMethod === "paypal" && <div className="w-3 h-3 rounded-full bg-white"></div>}
                   </div>
                   <span className="font-medium">PayPal</span>
                 </div>
@@ -90,12 +104,13 @@ const PaymentMethod = () => {
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Successful!</h3>
-              <p className="text-gray-600 mb-6">Your payment of Rs{paymentAmount.toFixed(2)} has been processed successfully.</p>
+              <p className="text-gray-600 mb-6">Your payment of Rs {totalPayment.toFixed(2)} has been processed successfully.</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Let's Fly!</h3>
             </div>
           ) : (
             <>
               {/* Credit Card Form */}
-              {selectedMethod === 'credit-card' && (
+              {selectedMethod === "credit-card" && (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 mb-1">
@@ -112,7 +127,7 @@ const PaymentMethod = () => {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label htmlFor="cardName" className="block text-sm font-medium text-gray-700 mb-1">
                       Name on Card
@@ -128,7 +143,7 @@ const PaymentMethod = () => {
                       required
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 mb-1">
@@ -145,7 +160,7 @@ const PaymentMethod = () => {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label htmlFor="cvv" className="block text-sm font-medium text-gray-700 mb-1">
                         CVV
@@ -162,7 +177,7 @@ const PaymentMethod = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center">
                     <input
                       type="checkbox"
@@ -175,32 +190,34 @@ const PaymentMethod = () => {
                       Save card details for future payments
                     </label>
                   </div>
-                  
+
                   <div>
                     <button
                       type="submit"
                       className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                      Pay Rs{paymentAmount.toFixed(2)}
+                      Pay Rs {totalPayment.toFixed(2)}
                     </button>
                   </div>
                 </form>
               )}
-              
+
               {/* PayPal Option */}
-              {selectedMethod === 'paypal' && (
+              {selectedMethod === "paypal" && (
                 <div className="space-y-6">
                   <div className="text-center py-4">
                     <div className="mb-4">
                       <div className="inline-block bg-blue-100 p-4 rounded-full">
                         <svg className="w-12 h-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M7.5 6.5c0 3.2 2.3 5.8 5.5 5.8s5.5-2.6 5.5-5.8c0-3.2-2.3-5.8-5.5-5.8s-5.5 2.6-5.5 5.8zm12.5 0c0 5.5-4 10-9 10s-9-4.5-9-10 4-10 9-10 9 4.5 9 10z"/>
+                          <path d="M7.5 6.5c0 3.2 2.3 5.8 5.5 5.8s5.5-2.6 5.5-5.8c0-3.2-2.3-5.8-5.5-5.8s-5.5 2.6-5.5 5.8zm12.5 0c0 5.5-4 10-9 10s-9-4.5-9-10 4-10 9-10 9 4.5 9 10z" />
                         </svg>
                       </div>
                     </div>
-                    <p className="text-gray-600 mb-6">You'll be redirected to PayPal to complete your payment of <span className="font-bold">Rs {paymentAmount.toFixed(2)}</span>.</p>
+                    <p className="text-gray-600 mb-6">
+                      You'll be redirected to PayPal to complete your payment of <span className="font-bold">Rs {totalPayment.toFixed(2)}</span>.
+                    </p>
                   </div>
-                  
+
                   <div>
                     <button
                       onClick={handleSubmit}

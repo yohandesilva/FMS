@@ -2,11 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import Header from "../components/PassengerCargo/general/Header";
 import Footer from "../components/PassengerCargo/general/Footer";
 import Home from "../pages/PassengerCargo/Home";
-import Login from "../pages/PassengerCargo/Login";
-import SignUp from "../pages/PassengerCargo/SignUp";
-import Cargo from "../pages/PassengerCargo/Cargo";
-import Flights from "../pages/PassengerCargo/Flights";
-import ContactSupport from "../pages/PassengerCargo/ContactSupport";
 import DepartureFlight from "../components/PassengerCargo/DepartureFlight";
 import ReturnFlight from "../components/PassengerCargo/ReturnFlight";
 import Price from "../components/PassengerCargo/Price";
@@ -22,12 +17,7 @@ const ApplicantRoutes = () => {
       <Routes>
         {/* route: general */}
         <Route path="/" element={<Home />} />
-        <Route path="/cargo" element={<Cargo />} />
         <Route path="/acceptance-declaration" element={<ADForm />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/support" element={<ContactSupport />} />
-        <Route path="/flights" element={<Flights />} />
         <Route path="/departure-flight" element={<DepartureFlight />} />
         <Route path="/return-flight" element={<ReturnFlight />} />
         <Route path="/price-details" element={<Price />} />

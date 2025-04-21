@@ -1,199 +1,336 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
+import axios from "../../axiosConfig";
 
 const AirlineAdminDashboard = () => {
-  // State for airlines and cargo
-  const [airlines, setAirlines] = useState([
-    { id: 1, name: 'SkyWings Airlines', code: 'SWA', status: 'Active', fleetSize: 42 },
-    { id: 2, name: 'Ocean Air', code: 'OCA', status: 'Active', fleetSize: 28 },
-    { id: 3, name: 'Golden Eagle', code: 'GEA', status: 'Inactive', fleetSize: 15 },
-  ]);
-  
-  const [cargo, setCargo] = useState([
-    { id: 1, trackingNumber: 'CRG001', weight: '2500kg', destination: 'New York', airline: 'SkyWings Airlines', status: 'In Transit' },
-    { id: 2, trackingNumber: 'CRG002', weight: '1800kg', destination: 'London', airline: 'Ocean Air', status: 'Scheduled' },
-    { id: 3, trackingNumber: 'CRG003', weight: '3200kg', destination: 'Tokyo', airline: 'SkyWings Airlines', status: 'Delivered' },
-  ]);
+  // State for flights
+  const [flights, setFlights] = useState([]);
+  const [newFlight, setNewFlight] = useState({
+    from: "",
+    to: "",
+    departDate: "",
+    returnDate: "",
+    airlineName: "",
+    status: "active",
+    oneWayPrice: "",
+    roundTripPrice: "",
+  });
+  const [activeTab, setActiveTab] = useState("flights");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // State for form inputs
-  const [activeTab, setActiveTab] = useState('airlines');
-  const [newAirline, setNewAirline] = useState({ name: '', code: '', status: 'Active', fleetSize: 0 });
-  const [newCargo, setNewCargo] = useState({ trackingNumber: '', weight: '', destination: '', airline: '', status: 'Scheduled' });
-  
-  // Scroll state
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const dashboardRef = useRef(null);
-
-  // Handle scroll event
-  const handleScroll = () => {
-    if (dashboardRef.current) {
-      setScrollPosition(dashboardRef.current.scrollTop);
-    }
-  };
-
-  // Attach scroll event listener
+  // Fetch flights from the backend
   useEffect(() => {
-    const dashboard = dashboardRef.current;
-    if (dashboard) {
-      dashboard.addEventListener('scroll', handleScroll);
-    }
-    return () => {
-      if (dashboard) {
-        dashboard.removeEventListener('scroll', handleScroll);
+    const fetchFlights = async () => {
+      try {
+        const response = await axios.get("/flights");
+        if (response.data.success) {
+          setFlights(response.data.flights);
+        } else {
+          console.error("Failed to fetch flights:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching flights:", error);
       }
     };
+
+    fetchFlights();
   }, []);
 
-  // Scroll to top function
-  const scrollToTop = () => {
-    if (dashboardRef.current) {
-      dashboardRef.current.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
+  // Handle adding a new flight
+  const handleAddFlight = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.post("/flights", newFlight);
+      if (response.data.success) {
+        setFlights([...flights, response.data.flight]);
+        setNewFlight({
+          from: "",
+          to: "",
+          departDate: "",
+          returnDate: "",
+          airlineName: "",
+          status: "active",
+          oneWayPrice: "",
+          roundTripPrice: "",
+        });
+      } else {
+        setError(response.data.message || "Failed to add flight");
+      }
+    } catch (error) {
+      console.error("Error adding flight:", error);
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle adding new airline
-  const handleAddAirline = (e) => {
-    e.preventDefault();
-    const id = airlines.length > 0 ? Math.max(...airlines.map(a => a.id)) + 1 : 1;
-    setAirlines([...airlines, { ...newAirline, id }]);
-    setNewAirline({ name: '', code: '', status: 'Active', fleetSize: 0 });
+  // Handle editing a flight
+  const handleEditFlight = async (id) => {
+    const flightToEdit = flights.find((flight) => flight._id === id);
+    if (!flightToEdit) return;
+
+    const updatedFrom = prompt("Enter new 'From' location:", flightToEdit.from);
+    const updatedTo = prompt("Enter new 'To' location:", flightToEdit.to);
+    const updatedDepartDate = prompt(
+      "Enter new Departure Date (YYYY-MM-DD):",
+      flightToEdit.departDate.split("T")[0]
+    );
+    const updatedReturnDate = prompt(
+      "Enter new Return Date (YYYY-MM-DD):",
+      flightToEdit.returnDate ? flightToEdit.returnDate.split("T")[0] : ""
+    );
+    const updatedAirlineName = prompt(
+      "Enter new Airline Name:",
+      flightToEdit.airlineName
+    );
+    const updatedStatus = prompt(
+      "Enter new Status (active/inactive):",
+      flightToEdit.status
+    );
+    const updatedOneWayPrice = prompt(
+      "Enter new One-Way Price:",
+      flightToEdit.oneWayPrice
+    );
+    const updatedRoundTripPrice = prompt(
+      "Enter new Round-Trip Price:",
+      flightToEdit.roundTripPrice
+    );
+
+    try {
+      const response = await axios.put(`/flights/${id}`, {
+        from: updatedFrom,
+        to: updatedTo,
+        departDate: updatedDepartDate,
+        returnDate: updatedReturnDate || null,
+        airlineName: updatedAirlineName,
+        status: updatedStatus,
+        oneWayPrice: updatedOneWayPrice,
+        roundTripPrice: updatedRoundTripPrice,
+      });
+
+      if (response.data.success) {
+        setFlights((prevFlights) =>
+          prevFlights.map((flight) =>
+            flight._id === id ? response.data.flight : flight
+          )
+        );
+      } else {
+        console.error("Failed to edit flight:", response.data.message);
+      }
+    } catch (error) {
+      console.error("Error editing flight:", error);
+    }
   };
 
-  // Handle adding new cargo
-  const handleAddCargo = (e) => {
-    e.preventDefault();
-    const id = cargo.length > 0 ? Math.max(...cargo.map(c => c.id)) + 1 : 1;
-    setCargo([...cargo, { ...newCargo, id }]);
-    setNewCargo({ trackingNumber: '', weight: '', destination: '', airline: '', status: 'Scheduled' });
-  };
-
-  // Handle removing airline
-  const handleRemoveAirline = (id) => {
-    setAirlines(airlines.filter(airline => airline.id !== id));
-  };
-
-  // Handle removing cargo
-  const handleRemoveCargo = (id) => {
-    setCargo(cargo.filter(item => item.id !== id));
+  // Handle deleting a flight
+  const handleDeleteFlight = async (id) => {
+    try {
+      const response = await axios.delete(`/flights/${id}`);
+      if (response.data.success) {
+        setFlights(flights.filter((flight) => flight._id !== id));
+      } else {
+        console.error("Failed to delete flight:", response.data.message);
+      }
+    } catch (error) {
+      console.error("Error deleting flight:", error);
+    }
   };
 
   return (
-    <div 
-      ref={dashboardRef}
-      className="h-screen overflow-y-auto bg-gray-100 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-    >
+    <div className="h-screen overflow-y-auto bg-gray-100 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
       <div className="container mx-auto py-6 px-6 pb-16">
-        {/* Fixed header with tabs */}
-        <div className="sticky top-0 bg-white shadow-md p-4 z-10 mb-6 rounded-lg">
-          <div className="flex border-b border-gray-300">
-            <button 
-              className={`py-2 px-4 mr-2 ${activeTab === 'airlines' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
-              onClick={() => setActiveTab('airlines')}
-            >
-              Airlines
-            </button>
-            <button 
-              className={`py-2 px-4 ${activeTab === 'cargo' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
-              onClick={() => setActiveTab('cargo')}
-            >
-              Cargo
-            </button>
-          </div>
-        </div>
-
-        {/* Airlines Tab */}
-        {activeTab === 'airlines' && (
+        {/* Flights Tab */}
+        {activeTab === "flights" && (
           <div>
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Add New Airline</h2>
-              <form onSubmit={handleAddAirline}>
+              <h2 className="text-xl font-semibold mb-4">Add New Flight</h2>
+              <form onSubmit={handleAddFlight}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-gray-700 mb-2">Airline Name</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-gray-700 mb-2">From</label>
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded"
-                      value={newAirline.name}
-                      onChange={(e) => setNewAirline({...newAirline, name: e.target.value})}
+                      value={newFlight.from}
+                      onChange={(e) =>
+                        setNewFlight({ ...newFlight, from: e.target.value })
+                      }
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">Airline Code</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-gray-700 mb-2">To</label>
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded"
-                      value={newAirline.code}
-                      onChange={(e) => setNewAirline({...newAirline, code: e.target.value})}
+                      value={newFlight.to}
+                      onChange={(e) =>
+                        setNewFlight({ ...newFlight, to: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">
+                      Departure Date
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      value={newFlight.departDate}
+                      onChange={(e) =>
+                        setNewFlight({
+                          ...newFlight,
+                          departDate: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">Return Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      value={newFlight.returnDate}
+                      onChange={(e) =>
+                        setNewFlight({
+                          ...newFlight,
+                          returnDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">
+                      Airline Name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      value={newFlight.airlineName}
+                      onChange={(e) =>
+                        setNewFlight({
+                          ...newFlight,
+                          airlineName: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-gray-700 mb-2">Status</label>
-                    <select 
+                    <select
                       className="w-full p-2 border border-gray-300 rounded"
-                      value={newAirline.status}
-                      onChange={(e) => setNewAirline({...newAirline, status: e.target.value})}
+                      value={newFlight.status}
+                      onChange={(e) =>
+                        setNewFlight({ ...newFlight, status: e.target.value })
+                      }
                     >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">Fleet Size</label>
-                    <input 
-                      type="number" 
+                    <label className="block text-gray-700 mb-2">One-Way Price</label>
+                    <input
+                      type="number"
                       className="w-full p-2 border border-gray-300 rounded"
-                      value={newAirline.fleetSize}
-                      onChange={(e) => setNewAirline({...newAirline, fleetSize: parseInt(e.target.value) || 0})}
-                      min="0"
+                      value={newFlight.oneWayPrice}
+                      onChange={(e) =>
+                        setNewFlight({
+                          ...newFlight,
+                          oneWayPrice: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">Round-Trip Price</label>
+                    <input
+                      type="number"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      value={newFlight.roundTripPrice}
+                      onChange={(e) =>
+                        setNewFlight({
+                          ...newFlight,
+                          roundTripPrice: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700"
+                  disabled={loading}
                 >
-                  Add Airline
+                  {loading ? "Adding..." : "Add Flight"}
                 </button>
               </form>
+              {error && <p className="text-red-500 mt-4">{error}</p>}
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Airlines List</h2>
+              <h2 className="text-xl font-semibold mb-4">Flights List</h2>
               <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="min-w-full bg-white">
                   <thead className="sticky top-0 bg-white">
                     <tr className="bg-gray-100">
-                      <th className="py-2 px-4 text-left">ID</th>
-                      <th className="py-2 px-4 text-left">Name</th>
-                      <th className="py-2 px-4 text-left">Code</th>
+                      <th className="py-2 px-4 text-left">From</th>
+                      <th className="py-2 px-4 text-left">To</th>
+                      <th className="py-2 px-4 text-left">Departure Date</th>
+                      <th className="py-2 px-4 text-left">Return Date</th>
+                      <th className="py-2 px-4 text-left">Airline Name</th>
                       <th className="py-2 px-4 text-left">Status</th>
-                      <th className="py-2 px-4 text-left">Fleet Size</th>
+                      <th className="py-2 px-4 text-left">One-Way Price</th>
+                      <th className="py-2 px-4 text-left">Round-Trip Price</th>
                       <th className="py-2 px-4 text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {airlines.map(airline => (
-                      <tr key={airline.id} className="border-t border-gray-200">
-                        <td className="py-2 px-4">{airline.id}</td>
-                        <td className="py-2 px-4">{airline.name}</td>
-                        <td className="py-2 px-4">{airline.code}</td>
+                    {flights.map((flight) => (
+                      <tr key={flight._id} className="border-t border-gray-200">
+                        <td className="py-2 px-4">{flight.from}</td>
+                        <td className="py-2 px-4">{flight.to}</td>
                         <td className="py-2 px-4">
-                          <span className={`px-2 py-1 rounded text-xs ${airline.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {airline.status}
+                          {new Date(flight.departDate).toLocaleDateString()}
+                        </td>
+                        <td className="py-2 px-4">
+                          {flight.returnDate
+                            ? new Date(flight.returnDate).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="py-2 px-4">{flight.airlineName}</td>
+                        <td className="py-2 px-4">
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              flight.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {flight.status}
                           </span>
                         </td>
-                        <td className="py-2 px-4">{airline.fleetSize}</td>
+                        <td className="py-2 px-4">{flight.oneWayPrice}</td>
+                        <td className="py-2 px-4">{flight.roundTripPrice}</td>
                         <td className="py-2 px-4">
-                          <button 
-                            onClick={() => handleRemoveAirline(airline.id)}
+                          <button
+                            onClick={() => handleEditFlight(flight._id)}
+                            className="text-blue-600 hover:text-blue-800 mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFlight(flight._id)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            Remove
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -203,143 +340,6 @@ const AirlineAdminDashboard = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Cargo Tab */}
-        {activeTab === 'cargo' && (
-          <div>
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Add New Cargo</h2>
-              <form onSubmit={handleAddCargo}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-gray-700 mb-2">Tracking Number</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-2 border border-gray-300 rounded"
-                      value={newCargo.trackingNumber}
-                      onChange={(e) => setNewCargo({...newCargo, trackingNumber: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Weight</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-2 border border-gray-300 rounded"
-                      value={newCargo.weight}
-                      onChange={(e) => setNewCargo({...newCargo, weight: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Destination</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-2 border border-gray-300 rounded"
-                      value={newCargo.destination}
-                      onChange={(e) => setNewCargo({...newCargo, destination: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Airline</label>
-                    <select 
-                      className="w-full p-2 border border-gray-300 rounded"
-                      value={newCargo.airline}
-                      onChange={(e) => setNewCargo({...newCargo, airline: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Airline</option>
-                      {airlines.filter(a => a.status === 'Active').map(airline => (
-                        <option key={airline.id} value={airline.name}>{airline.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Status</label>
-                    <select 
-                      className="w-full p-2 border border-gray-300 rounded"
-                      value={newCargo.status}
-                      onChange={(e) => setNewCargo({...newCargo, status: e.target.value})}
-                    >
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="In Transit">In Transit</option>
-                      <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-                <button 
-                  type="submit" 
-                  className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700"
-                >
-                  Add Cargo
-                </button>
-              </form>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Cargo List</h2>
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="min-w-full bg-white">
-                  <thead className="sticky top-0 bg-white">
-                    <tr className="bg-gray-100">
-                      <th className="py-2 px-4 text-left">ID</th>
-                      <th className="py-2 px-4 text-left">Tracking Number</th>
-                      <th className="py-2 px-4 text-left">Weight</th>
-                      <th className="py-2 px-4 text-left">Destination</th>
-                      <th className="py-2 px-4 text-left">Airline</th>
-                      <th className="py-2 px-4 text-left">Status</th>
-                      <th className="py-2 px-4 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cargo.map(item => (
-                      <tr key={item.id} className="border-t border-gray-200">
-                        <td className="py-2 px-4">{item.id}</td>
-                        <td className="py-2 px-4">{item.trackingNumber}</td>
-                        <td className="py-2 px-4">{item.weight}</td>
-                        <td className="py-2 px-4">{item.destination}</td>
-                        <td className="py-2 px-4">{item.airline}</td>
-                        <td className="py-2 px-4">
-                          <span className={`px-2 py-1 rounded text-xs 
-                            ${item.status === 'Delivered' ? 'bg-green-100 text-green-800' : 
-                              item.status === 'In Transit' ? 'bg-blue-100 text-blue-800' : 
-                              item.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'}`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="py-2 px-4">
-                          <button 
-                            onClick={() => handleRemoveCargo(item.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Scroll to top button - appears when scrolled down */}
-        {scrollPosition > 300 && (
-          <button 
-            onClick={scrollToTop}
-            className="fixed bottom-4 right-4 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 z-20"
-            aria-label="Scroll to top"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </button>
         )}
       </div>
     </div>

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "../../axiosConfig";
+
 
 function PassengerBooking() {
   const navigate = useNavigate();
@@ -14,24 +16,39 @@ function PassengerBooking() {
     class: "economy",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Prepare query parameters
-    const queryParams = new URLSearchParams({
-      from: formData.from,
-      to: formData.to,
-      departDate: formData.departDate,
-      passengers: formData.passengers,
-      class: formData.class,
-      tripType: tripType,
-    });
 
-    if (tripType === "round") {
-      queryParams.append("returnDate", formData.returnDate);
+    // Format dates to include time 00:00:00
+    const formattedDepartDate =
+      new Date(formData.departDate).toISOString().split("T")[0] + "T00:00:00.000Z";
+    const formattedReturnDate = formData.returnDate
+      ? new Date(formData.returnDate).toISOString().split("T")[0] + "T00:00:00.000Z"
+      : null;
+
+    try {
+      // Fetch flight data
+      const response = await axios.get("/flights/searchRoundTripFlights", {
+        params: {
+          from: formData.from,
+          to: formData.to,
+          departDate: formattedDepartDate,
+          returnDate: formattedReturnDate,
+        },
+      });
+
+      console.log("Flights Data:", response.data);
+
+      // Navigate to departure-flight page and pass the flight data
+      navigate("/departure-flight", {
+        state: {
+          flights: response.data.flights, // Pass the fetched flights
+          tripType: tripType, // Pass the trip type
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching flights:", error);
     }
-
-    // Navigate to departure-flight page with query parameters
-    navigate(`/departure-flight?${queryParams.toString()}`);
   };
 
   const handleChange = (e) => {

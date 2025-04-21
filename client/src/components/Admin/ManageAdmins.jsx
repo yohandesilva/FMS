@@ -1,43 +1,53 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  X, 
-  Check, 
-  Mail, 
-  User, 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check,
+  Mail,
+  User,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
 } from "lucide-react";
 
 const ManageAdminsPage = () => {
-  // Sample initial data - replace with actual API call in production
-  const [admins, setAdmins] = useState([
-    { id: 1, name: "John Doe", email: "john.doe@airadmin.com", lastActive: "2023-04-01T12:30:00" },
-    { id: 2, name: "Jane Smith", email: "jane.smith@airadmin.com", lastActive: "2023-04-02T14:45:00" },
-    { id: 3, name: "Robert Johnson", email: "robert.j@airadmin.com", lastActive: "2023-04-03T09:15:00" },
-  ]);
-
+  const [admins, setAdmins] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Form state for adding new admin
-  const [newAdmin, setNewAdmin] = useState({
-    name: "",
-    email: "",
-    password: ""
-  });
+  // Fetch all admins from the backend
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        const response = await fetch("http://localhost:4000/api/admin");
+        const data = await response.json();
+
+        if (data.success) {
+          setAdmins(data.admins);
+        } else {
+          console.error("Failed to fetch admins:", data.message);
+        }
+      } catch (error) {
+        console.error("Fetch Admins Error:", error);
+      }
+    };
+
+    fetchAdmins();
+  }, []);
 
   // Filter admins based on search term
   const filteredAdmins = admins.filter(
     (admin) =>
-      admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      admin.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       admin.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -49,56 +59,112 @@ const ManageAdminsPage = () => {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
   // Handle adding a new admin
-  const handleAddAdmin = () => {
-    // Validation
+  const handleAddAdmin = async () => {
     if (!newAdmin.name || !newAdmin.email || !newAdmin.password) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
-    
-    // Email validation
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newAdmin.email)) {
-      alert("Please enter a valid email address");
+      setError("Please enter a valid email address");
       return;
     }
 
-    // Password validation (at least 8 characters)
     if (newAdmin.password.length < 8) {
-      alert("Password must be at least 8 characters long");
+      setError("Password must be at least 8 characters long");
       return;
     }
 
-    // Add new admin to the list with a new ID and current timestamp
-    const newAdminWithId = {
-      ...newAdmin,
-      id: admins.length > 0 ? Math.max(...admins.map(a => a.id)) + 1 : 1,
-      lastActive: new Date().toISOString()
-    };
+    setLoading(true);
+    setError("");
 
-    setAdmins([...admins, newAdminWithId]);
-    setNewAdmin({ name: "", email: "", password: "" });
-    setIsAddModalOpen(false);
+    try {
+      const response = await fetch("http://localhost:4000/api/admin/addAdmin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newAdmin.name,
+          email: newAdmin.email,
+          password: newAdmin.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAdmins([...admins, data.admin]);
+        setNewAdmin({ name: "", email: "", password: "" });
+        setIsAddModalOpen(false);
+      } else {
+        setError(data.message || "Failed to add admin");
+      }
+    } catch (err) {
+      console.error("Add Admin Error:", err);
+      setError("An error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle deleting an admin
-  const handleDeleteAdmin = () => {
-    if (selectedAdmin) {
-      setAdmins(admins.filter(admin => admin.id !== selectedAdmin.id));
-      setIsDeleteModalOpen(false);
-      setSelectedAdmin(null);
+  const handleDeleteAdmin = async () => {
+    if (!selectedAdmin) return;
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/admin/${selectedAdmin._id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAdmins(admins.filter((admin) => admin._id !== selectedAdmin._id));
+        setIsDeleteModalOpen(false);
+        setSelectedAdmin(null);
+      } else {
+        console.error("Failed to delete admin:", data.message);
+      }
+    } catch (error) {
+      console.error("Delete Admin Error:", error);
     }
   };
 
-  // Handle editing an admin (simplified for demo)
-  const handleEditAdmin = (admin) => {
-    // In a real app, you would open an edit modal and update the admin
-    alert(`Edit functionality would open here for ${admin.name}`);
+  // Handle editing an admin
+  const handleEditAdmin = async (admin) => {
+    const updatedName = prompt("Enter new name:", admin.fullName);
+    const updatedEmail = prompt("Enter new email:", admin.email);
+
+    if (!updatedName || !updatedEmail) return;
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/admin/${admin._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: updatedName, email: updatedEmail }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAdmins((prevAdmins) =>
+          prevAdmins.map((a) =>
+            a._id === admin._id ? { ...a, fullName: updatedName, email: updatedEmail } : a
+          )
+        );
+      } else {
+        console.error("Failed to edit admin:", data.message);
+      }
+    } catch (error) {
+      console.error("Edit Admin Error:", error);
+    }
   };
 
   return (
@@ -132,16 +198,16 @@ const ManageAdminsPage = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Active
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -149,24 +215,15 @@ const ManageAdminsPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAdmins.length > 0 ? (
                 filteredAdmins.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-gray-50">
+                  <tr key={admin._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-800 font-medium text-sm">
-                            {admin.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{admin.name}</div>
-                        </div>
-                      </div>
+                      <div className="text-sm font-medium text-gray-900">{admin.fullName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{admin.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(admin.lastActive)}
+                      {formatDate(admin.updatedAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -197,22 +254,6 @@ const ManageAdminsPage = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination (simplified) */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{filteredAdmins.length}</span> of{" "}
-            <span className="font-medium">{admins.length}</span> administrators
-          </div>
-          <div className="flex items-center space-x-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-              Previous
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-              Next
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Add Admin Modal */}
@@ -221,94 +262,76 @@ const ManageAdminsPage = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">Add New Administrator</h2>
-              <button 
+              <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setIsAddModalOpen(false)}
               >
                 <X size={20} />
               </button>
             </div>
-            
+
+            {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name *
                 </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User size={18} className="text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    className="pl-10 pr-3 py-2 block w-full border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="John Doe"
-                    value={newAdmin.name}
-                    onChange={(e) => setNewAdmin({...newAdmin, name: e.target.value})}
-                  />
-                </div>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="John Doe"
+                  value={newAdmin.name}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                  disabled={loading}
+                />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email Address *
                 </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail size={18} className="text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    className="pl-10 pr-3 py-2 block w-full border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="john.doe@example.com"
-                    value={newAdmin.email}
-                    onChange={(e) => setNewAdmin({...newAdmin, email: e.target.value})}
-                  />
-                </div>
+                <input
+                  type="email"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="john.doe@example.com"
+                  value={newAdmin.email}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                  disabled={loading}
+                />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Password *
                 </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock size={18} className="text-gray-400" />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="pl-10 pr-10 py-2 block w-full border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Minimum 8 characters"
-                    value={newAdmin.password}
-                    onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
-                  />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    <button 
-                      type="button" 
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Password must be at least 8 characters long
-                </p>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Minimum 8 characters"
+                  value={newAdmin.password}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
+                  disabled={loading}
+                />
               </div>
             </div>
-            
+
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                 onClick={() => setIsAddModalOpen(false)}
+                disabled={loading}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                className={`px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium ${
+                  loading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+                }`}
                 onClick={handleAddAdmin}
+                disabled={loading}
               >
-                Add Administrator
+                {loading ? "Adding..." : "Add Administrator"}
               </button>
             </div>
           </div>
@@ -325,7 +348,7 @@ const ManageAdminsPage = () => {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Administrator</h3>
               <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to delete <strong>{selectedAdmin.name}</strong>? This action cannot be undone.
+                Are you sure you want to delete <strong>{selectedAdmin.fullName}</strong>? This action cannot be undone.
               </p>
               <div className="flex justify-center space-x-3">
                 <button

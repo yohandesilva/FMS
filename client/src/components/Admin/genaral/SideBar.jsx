@@ -37,10 +37,18 @@ const Sidebar = () => {
 
   const handleNavigation = (pageId, url) => {
     setCurrentPage(pageId);
-    navigate(url);
+
+    if (pageId === "logout") {
+      // Clear adminToken from localStorage
+      localStorage.removeItem("adminToken");
+      // Navigate to login page (or home page)
+      navigate("/admin/login"); // Adjust this URL as needed
+    } else {
+      navigate(url);
+    }
   };
 
-  // Custom SVG Icons
+  // Custom SVG Icons (unchanged)
   function AirplaneIcon() {
     return (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
