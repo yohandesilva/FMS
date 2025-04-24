@@ -4,6 +4,7 @@ import Footer from "../components/PassengerCargo/general/Footer";
 import Home from "../pages/PassengerCargo/Home";
 import Cargo from "../pages/PassengerCargo/Cargo";
 import Flights from "../pages/PassengerCargo/Flights";
+import ContactSupport from "../pages/PassengerCargo/ContactSupport";
 import DepartureFlight from "../components/PassengerCargo/DepartureFlight";
 import ReturnFlight from "../components/PassengerCargo/ReturnFlight";
 import Price from "../components/PassengerCargo/Price";
@@ -22,6 +23,7 @@ const ApplicantRoutes = () => {
         <Route path="/cargo" element={<Cargo />} />
         <Route path="/acceptance-declaration" element={<ADForm />} />
         <Route path="/flights" element={<Flights />} />
+        <Route path="/support" element={<ContactSupport />} />
         <Route path="/departure-flight" element={<DepartureFlight />} />
         <Route path="/return-flight" element={<ReturnFlight />} />
         <Route path="/price-details" element={<Price />} />
