@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Header from "../components/PassengerCargo/general/Header";
 import Footer from "../components/PassengerCargo/general/Footer";
 import Home from "../pages/PassengerCargo/Home";
+import Login from "../pages/PassengerCargo/Login";
 import Cargo from "../pages/PassengerCargo/Cargo";
 import Flights from "../pages/PassengerCargo/Flights";
 import ContactSupport from "../pages/PassengerCargo/ContactSupport";
@@ -22,6 +23,7 @@ const ApplicantRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/cargo" element={<Cargo />} />
         <Route path="/acceptance-declaration" element={<ADForm />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/flights" element={<Flights />} />
         <Route path="/support" element={<ContactSupport />} />
         <Route path="/departure-flight" element={<DepartureFlight />} />
