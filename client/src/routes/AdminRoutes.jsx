@@ -70,6 +70,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Header from "../components/Admin/genaral/Header.jsx";
 import Sidebar from "../components/Admin/genaral/SideBar.jsx";
 import Airlines from "../pages/Admin/Airlines.jsx";
+import Admins from "../pages/Admin/Admins.jsx";
 import AdminsLogin from "../pages/Admin/AdminsLogin.jsx";
 
 const AdminRoutes = () => {
@@ -102,6 +103,7 @@ const AdminRoutes = () => {
       <Route path="/login" element={<AdminsLogin />} /> {/* Keep login as a standalone page */}
       <Route path="/" element={<AdminLayout><Airlines /></AdminLayout>} />
       <Route path="/dashboard" element={<AdminLayout><Airlines /></AdminLayout>} />
+      <Route path="/manage-admins" element={<AdminLayout><Admins /></AdminLayout>} />
       
       {/* Redirect unknown routes to dashboard */}
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
