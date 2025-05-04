@@ -26,8 +26,8 @@ const ApplicantRoutes = () => {
         <Route path="/acceptance-declaration" element={<ADForm />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/flights" element={<Flights />} />
         <Route path="/support" element={<ContactSupport />} />
+        <Route path="/flights" element={<Flights />} />
         <Route path="/departure-flight" element={<DepartureFlight />} />
         <Route path="/return-flight" element={<ReturnFlight />} />
         <Route path="/price-details" element={<Price />} />

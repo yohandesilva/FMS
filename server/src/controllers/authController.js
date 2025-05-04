@@ -55,6 +55,9 @@ exports.login = async (req, res) => {
     const token = user.generateAuthToken();
     res.json({ success: true, token, user: { id: user._id, email: user.email, role: user.role } });
   } catch (error) {
+    //console.error("Login Error:", error);// Debugging log
     res.status(500).json({ success: false, message: "Server error:user not validated.enter 6 digit password" });
   }
 };
+
+//

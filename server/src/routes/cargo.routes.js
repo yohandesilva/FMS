@@ -1,15 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const cargoController = require("../controllers/cargo.controller");
+const { auth, adminAuth } = require("../middleware/auth.middleware");
 
-// Cargo routes
-router.post('/book', (req, res) => {
-  // TODO: Implement cargo booking
-  res.json({ message: 'Book cargo endpoint' });
-});
+// User routes
+router.post("/", auth, (req, res) => cargoController.createCargoBooking(req, res));
+router.get("/:id", (req, res) => cargoController.getCargoDetails(req, res));
+router.post("/:id/adf", auth, (req, res) => cargoController.submitADF(req, res));
 
-router.get('/track/:id', (req, res) => {
-  // TODO: Implement cargo tracking
-  res.json({ message: 'Track cargo endpoint' });
-});
+// Admin routes
+router.get("/", adminAuth, (req, res) => cargoController.getAllCargoBookings(req, res)); 
+router.patch("/:id/status", adminAuth, (req, res) => cargoController.updateCargoStatus(req, res));
+router.get("/:id/adf", adminAuth, (req, res) => cargoController.getADFByCargo(req, res));
 
-module.exports = router; 
+module.exports = router;

@@ -7,7 +7,7 @@ const ContactSupport = () => {
     firstName: "",
     lastName: "",
     email: "",
-    phone: "",
+    phoneNumber: "",
     subject: "General Inquiry",
     message: ""
   });
@@ -28,7 +28,14 @@ const ContactSupport = () => {
     try {
       const response = await axios.post("/contact/contactSupport", formData);
       setSuccessMessage("Your inquiry has been submitted successfully.");
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", subject: "General Inquiry", message: "" });
+      setFormData({ 
+        firstName: "", 
+        lastName: "", 
+        email: "", 
+        phoneNumber: "", 
+        subject: "General Inquiry", 
+        message: "" 
+      });
     } catch (error) {
       setErrorMessage("Failed to send your inquiry. Please try again.");
     }
@@ -61,24 +68,76 @@ const ContactSupport = () => {
           {successMessage && <div className="text-green-600 mt-2">{successMessage}</div>}
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <input className="p-3 border rounded-lg w-full" type="text" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="First Name" required />
-              <input className="p-3 border rounded-lg w-full" type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Last Name" required />
-              <input className="p-3 border rounded-lg w-full" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required />
-              <input className="p-3 border rounded-lg w-full" type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone Number" />
+              <input 
+                className="p-3 border rounded-lg w-full" 
+                type="text" 
+                name="firstName" 
+                value={formData.firstName} 
+                onChange={handleChange} 
+                placeholder="First Name" 
+                required 
+              />
+              <input 
+                className="p-3 border rounded-lg w-full" 
+                type="text" 
+                name="lastName" 
+                value={formData.lastName} 
+                onChange={handleChange} 
+                placeholder="Last Name" 
+                required 
+              />
+              <input 
+                className="p-3 border rounded-lg w-full" 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                placeholder="Email" 
+                required 
+              />
+              <input 
+                className="p-3 border rounded-lg w-full" 
+                type="tel" 
+                name="phoneNumber" 
+                value={formData.phoneNumber} 
+                onChange={handleChange} 
+                placeholder="Phone Number" 
+              />
             </div>
             <div className="mt-4">
               <label className="block font-semibold">Select Subject</label>
               <div className="flex flex-wrap gap-4 mt-2">
                 {['General Inquiry', 'Support', 'Feedback'].map((subject) => (
                   <label key={subject} className="flex items-center space-x-2 cursor-pointer">
-                    <input type="radio" name="subject" value={subject} checked={formData.subject === subject} onChange={handleChange} className="accent-blue-500" />
+                    <input 
+                      type="radio" 
+                      name="subject" 
+                      value={subject} 
+                      checked={formData.subject === subject} 
+                      onChange={handleChange} 
+                      className="accent-blue-500" 
+                    />
                     <span>{subject}</span>
                   </label>
                 ))}
               </div>
             </div>
-            <textarea className="w-full mt-4 p-3 border rounded-lg" rows="4" name="message" value={formData.message} onChange={handleChange} placeholder="Write your message..." required></textarea>
-            <button type="submit" className="mt-4 bg-blue-800 text-white px-6 py-2 rounded-lg hover:scale-105 transition-transform" disabled={loading}>{loading ? "Submitting..." : "Submit >"}</button>
+            <textarea 
+              className="w-full mt-4 p-3 border rounded-lg" 
+              rows="4" 
+              name="message" 
+              value={formData.message} 
+              onChange={handleChange} 
+              placeholder="Write your message..." 
+              required
+            ></textarea>
+            <button 
+              type="submit" 
+              className="mt-4 bg-blue-800 text-white px-6 py-2 rounded-lg hover:scale-105 transition-transform" 
+              disabled={loading}
+            >
+              {loading ? "Submitting..." : "Submit >"}
+            </button>
           </form>
         </div>
       </div>

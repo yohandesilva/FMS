@@ -32,6 +32,12 @@ const Sidebar = () => {
       label: "Manage Admins",
       icon: <Users size={24} />,
       url: "/admin/manage-admins",
+    },
+    {
+      id: "help",
+      label: "Help Center",
+      icon: <HelpCircle size={24} />,
+      url: "/admin/help",
     }
   ];
 
@@ -140,22 +146,6 @@ const Sidebar = () => {
       {/* Bottom Menu */}
       <div className="border-t border-blue-800 p-4">
         <ul className="space-y-2">
-          <li>
-            <button
-              className={`w-full flex items-center p-3 rounded-lg transition-colors hover:bg-blue-800 ${
-                currentPage === "help" ? "bg-blue-700" : ""
-              }`}
-              onClick={() => handleNavigation("help", "/admin/help")}
-            >
-              <HelpCircle
-                size={20}
-                className={currentPage === "help" ? "text-white" : "text-blue-200"}
-              />
-              {!isCollapsed && (
-                <span className="ml-3 font-medium">Help Center</span>
-              )}
-            </button>
-          </li>
           <li>
             <button
               className={`w-full flex items-center p-3 rounded-lg transition-colors hover:bg-blue-800 ${

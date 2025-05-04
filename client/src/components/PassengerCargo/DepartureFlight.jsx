@@ -9,11 +9,22 @@ const DepartureFlight = () => {
   const tripType = location.state?.tripType || "round"; // Get trip type from state
 
   const handleContinueClick = (selectedFlight) => {
-    navigate("/booking-seats", {
+    // Determine the correct price based on the trip type
+    const priceToPass = tripType === "round"
+      ? selectedFlight.roundTripPrice // Use roundTripPrice if it's a round trip
+      : selectedFlight.oneWayPrice;   // Use oneWayPrice if it's a one-way trip
+
+    // Ensure a valid price is passed (handle cases where roundTripPrice might be missing)
+    const validPrice = typeof priceToPass === 'number' ? priceToPass : selectedFlight.oneWayPrice;
+
+    console.log(`Trip Type: ${tripType}, Price to pass: ${validPrice}`); // Add log for debugging
+
+    // Navigate to PassengerDetails instead of BookSeat
+    navigate("/passenger-details", {
       state: {
         flight_id: selectedFlight._id, // Pass the flight ID
-        flightPrice: selectedFlight.oneWayPrice, // Pass the one-way price
-        tripType, // Pass the trip type
+        flightPrice: validPrice,       // Pass the CORRECT price based on tripType
+        tripType,                      // Pass the trip type
       },
     });
   };
@@ -54,7 +65,7 @@ const DepartureFlight = () => {
                     Duration: 4h 30m {/* Hardcoded default value */}
                   </p>
                   <br />
-                  {tripType === "round" && (
+                  {tripType === "round" && flight.returnDate && ( // Check if returnDate exists for round trip display
                     <>
                       <p className="text-sm text-gray-600">
                         Return Date:{" "}
@@ -73,12 +84,15 @@ const DepartureFlight = () => {
                       ${flight.oneWayPrice}
                     </span>
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Round-Trip Price:{" "}
-                    <span className="text-lg font-bold text-blue-800">
-                      ${flight.roundTripPrice || "N/A"}
-                    </span>
-                  </p>
+                  {/* Only show Round-Trip Price if it exists */}
+                  {typeof flight.roundTripPrice === 'number' && (
+                    <p className="text-sm text-gray-600">
+                      Round-Trip Price:{" "}
+                      <span className="text-lg font-bold text-blue-800">
+                        ${flight.roundTripPrice}
+                      </span>
+                    </p>
+                  )}
                   <button
                     onClick={() => handleContinueClick(flight)}
                     className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

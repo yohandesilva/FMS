@@ -74,6 +74,9 @@ import Passenger from "../pages/Admin/Passengers.jsx";
 import Cargoes from "../pages/Admin/Cargoes.jsx";
 import Admins from "../pages/Admin/Admins.jsx";
 import AdminsLogin from "../pages/Admin/AdminsLogin.jsx";
+import ADFDetailsPage from "../pages/Admin/ADFDetailsPage.jsx"; // Import the new page
+import Help from "../pages/Admin/Help.jsx"; 
+
 
 const AdminRoutes = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -92,7 +95,8 @@ const AdminRoutes = () => {
         <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
 
         {/* Main Content */}
-        <div className={`flex-grow bg-gray-100 transition-all duration-300`}>
+        {/* Added overflow-y-auto here for scrolling */}
+        <div className={`flex-grow bg-gray-100 transition-all duration-300 overflow-y-auto`}>
           {children}
         </div>
       </div>
@@ -107,8 +111,15 @@ const AdminRoutes = () => {
       <Route path="/dashboard" element={<AdminLayout><Airlines /></AdminLayout>} />
       <Route path="/passenger-booking-details" element={<AdminLayout><Passenger /></AdminLayout>} />
       <Route path="/cargo-booking-details" element={<AdminLayout><Cargoes /></AdminLayout>} />
+      {/* Add the new route for ADF details */}
+      <Route path="/cargo/:cargoId/adf-details" element={<AdminLayout><ADFDetailsPage /></AdminLayout>} />
       <Route path="/manage-admins" element={<AdminLayout><Admins /></AdminLayout>} />
+
+
+
+      <Route path="/help" element={<AdminLayout><Help /></AdminLayout>} /> 
       
+
       {/* Redirect unknown routes to dashboard */}
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>

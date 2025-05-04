@@ -5,44 +5,53 @@ import axios from "../../axiosConfig";
 const BookSeat = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { flight_id, passenger_id, flightPrice, tripType } = location.state; // Get flightPrice and tripType
+  const { flight_id, passenger_id, flightPrice, tripType } = location.state || {};
 
   const [seats, setSeats] = useState([]);
   const [selectedSeat, setSelectedSeat] = useState(null);
 
   useEffect(() => {
-    // Fetch seat data for the flight
+    if (!flight_id || !passenger_id) {
+      console.error("Missing flight_id or passenger_id in BookSeat component state:", location.state);
+      alert("Required booking information is missing. Please start the booking process again.");
+      navigate("/");
+      return;
+    }
+
     const fetchSeats = async () => {
       try {
-        const response = await axios.get(`http://localhost:4000/api/seats/${flight_id}`);
-        setSeats(response.data.seats);
+        const response = await axios.get(`/seats/${flight_id}`);
+        setSeats(response.data.seats || []);
       } catch (error) {
-        console.error("Error fetching seats:", error);
+        console.error("Error fetching seats:", error.response?.data || error.message);
       }
     };
 
     fetchSeats();
-  }, [flight_id]);
+  }, [flight_id, passenger_id, navigate, location.state]);
 
   const handleSeatSelect = async (row, seat) => {
     const seatKey = `${row}${seat}`;
     const seatPrice = ["A", "K"].includes(seat) ? 40 : ["C", "H"].includes(seat) ? 25 : 0;
 
-    // Check if the passenger has already selected a seat
     if (selectedSeat) {
-      alert("You can only select one seat for this flight.");
+      alert("You have already selected a seat. To change, please refresh or go back (Note: This might lose current selection).");
       return;
     }
 
-    // Check if the seat is already selected
     const existingSeat = seats.find((s) => s.seatNumber === seatKey);
     if (existingSeat) {
       alert("This seat is unavailable.");
       return;
     }
 
+    if (!passenger_id) {
+      alert("Passenger information is missing. Cannot select seat.");
+      return;
+    }
+
     try {
-      const response = await axios.post("http://localhost:4000/api/seats/select", {
+      const response = await axios.post("/seats/select", {
         flight_id,
         seatNumber: seatKey,
         passenger_id,
@@ -56,10 +65,12 @@ const BookSeat = () => {
           ...prevSeats,
           { seatNumber: seatKey, passenger_id, price: seatPrice },
         ]);
+      } else {
+        alert(response.data.message || "Failed to select seat. Please try again.");
       }
     } catch (error) {
-      console.error("Error selecting seat:", error);
-      alert(error.response?.data?.message || "Failed to select seat. Please try again.");
+      console.error("Error selecting seat:", error.response?.data || error.message);
+      alert(error.response?.data?.message || "An error occurred while selecting the seat.");
     }
   };
 
@@ -69,17 +80,28 @@ const BookSeat = () => {
       return;
     }
 
-    const seatData = seats.find((s) => s.seatNumber === selectedSeat);
-    const seatFee = seatData?.price || 0; // Get the seat fee
+    const seatPrice = ["A", "K"].includes(selectedSeat.slice(-1)) ? 40 : ["C", "H"].includes(selectedSeat.slice(-1)) ? 25 : 0;
+    const seatFee = seatPrice;
 
-    // Redirect to PaymentMethods.jsx with necessary data
+    const validFlightPrice = typeof flightPrice === "number" ? flightPrice : 0;
+
+    console.log("Navigating to PaymentMethods with state:", {
+      selectedSeat,
+      flight_id,
+      passenger_id,
+      flightPrice: validFlightPrice,
+      seatFee,
+      tripType,
+    });
+
     navigate("/payment-methods", {
       state: {
         selectedSeat,
         flight_id,
         passenger_id,
-        flightPrice, // Pass the flight price
-        seatFee, // Pass the seat fee
+        flightPrice: validFlightPrice,
+        seatFee,
+        tripType,
       },
     });
   };
@@ -87,31 +109,38 @@ const BookSeat = () => {
   const renderSeat = (row, seat) => {
     const seatKey = `${row}${seat}`;
     const seatData = seats.find((s) => s.seatNumber === seatKey);
-    const isUnavailable = !!seatData; // Seat is unavailable if it exists in the database
-    const isSelected = selectedSeat === seatKey;
+    const isUnavailable = !!seatData;
+    const isSelectedByCurrentUser = selectedSeat === seatKey;
 
     const seatClasses = {
-      available: "bg-green-400 hover:bg-green-500",
-      "chargeable-high": "bg-purple-500 hover:bg-purple-600",
-      "chargeable-low": "bg-indigo-500 hover:bg-indigo-600",
+      available: "bg-green-400 hover:bg-green-500 cursor-pointer",
+      "chargeable-high": "bg-purple-500 hover:bg-purple-600 cursor-pointer",
+      "chargeable-low": "bg-indigo-500 hover:bg-indigo-600 cursor-pointer",
       unavailable: "bg-gray-300 cursor-not-allowed",
+      selected: "bg-blue-500 ring-2 ring-offset-1 ring-blue-700",
     };
 
-    const status = isUnavailable
-      ? "unavailable"
-      : ["A", "K"].includes(seat)
-      ? "chargeable-high"
-      : ["C", "H"].includes(seat)
-      ? "chargeable-low"
-      : "available";
+    let status;
+    if (isSelectedByCurrentUser) {
+      status = "selected";
+    } else if (isUnavailable) {
+      status = "unavailable";
+    } else if (["A", "K"].includes(seat)) {
+      status = "chargeable-high";
+    } else if (["C", "H"].includes(seat)) {
+      status = "chargeable-low";
+    } else {
+      status = "available";
+    }
+
+    const canClick = !isUnavailable && !selectedSeat;
 
     return (
       <div
         key={seatKey}
-        className={`w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold text-white ${
-          isSelected ? "bg-blue-500" : seatClasses[status]
-        }`}
-        onClick={() => !isUnavailable && !selectedSeat && handleSeatSelect(row, seat)}
+        className={`w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold text-white transition-colors duration-150 ${seatClasses[status]} ${canClick ? "" : "opacity-75"}`}
+        onClick={() => canClick && handleSeatSelect(row, seat)}
+        title={isUnavailable ? `Seat ${seatKey} (Unavailable)` : `Seat ${seatKey}`}
       >
         {seat}
       </div>
@@ -126,7 +155,6 @@ const BookSeat = () => {
         </div>
 
         <div className="flex space-x-4">
-          {/* Seat Map */}
           <div className="flex-grow">
             {Array.from({ length: 30 }, (_, i) => i + 1).map((row) => (
               <div key={row} className="flex items-center mb-2">
@@ -144,7 +172,6 @@ const BookSeat = () => {
             ))}
           </div>
 
-          {/* Legend and Selected Seats */}
           <div className="w-64 space-y-4">
             <div className="bg-gray-50 p-4 rounded-md">
               <h3 className="text-lg font-semibold mb-2">Seat Legend</h3>
@@ -177,7 +204,6 @@ const BookSeat = () => {
           </div>
         </div>
 
-        {/* Confirm Button */}
         <div className="mt-6 text-center">
           <button
             type="button"

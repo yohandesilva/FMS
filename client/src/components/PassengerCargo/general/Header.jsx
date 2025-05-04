@@ -168,30 +168,18 @@ const Navbar = ({ children }) => {
           {/* Login Button with Expanded Interaction */}
           <div className="hidden lg:flex items-center">
             <a href="/login" className="group">
-              <button 
+              <button
                 className="
-                  bg-gradient-to-r from-blue-500 to-blue-700 
-                  text-white px-6 py-2.5 rounded-lg 
-                  shadow-lg hover:shadow-xl 
-                  transition-all duration-300 
+                  bg-gradient-to-r from-blue-500 to-blue-700
+                  text-white px-6 py-2.5 rounded-lg
+                  shadow-lg hover:shadow-xl
+                  transition-all duration-300
                   hover:scale-105 flex items-center
-                  group-hover:bg-gradient-to-r 
+                  group-hover:bg-gradient-to-r
                   group-hover:from-blue-600 group-hover:to-blue-800
                 "
               >
-                <span className="transition-transform group-hover:translate-x-1">Login</span>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5 ml-2 transition-transform group-hover:rotate-90" 
-                  viewBox="0 0 20 20" 
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <span>Login</span>
               </button>
             </a>
           </div>
