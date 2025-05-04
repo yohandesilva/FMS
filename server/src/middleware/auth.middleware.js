@@ -1,35 +1,79 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user.model');
+const jwt = require("jsonwebtoken");
+const User = require("../models/user.model");
+const Admin = require("../models/admin.model");
 
-const auth = async (req, res, next) => {
+// Regular user authentication
+exports.auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Check for token
+    if (!req.headers.authorization || !req.headers.authorization.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized - No token provided" });
+    }
+
+    // Extract token
+    const token = req.headers.authorization.split(" ")[1];
     
-    if (!token) {
-      return res.status(401).json({ message: 'No authentication token found' });
-    }
-
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ _id: decoded.id });
-
+    
+    // Check if user exists
+    const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ message: "Unauthorized - User not found" });
     }
-
+    
+    // Add user to request
     req.user = user;
-    req.token = token;
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Authentication failed' });
+    console.error("Auth Error:", error);
+    
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Unauthorized - Invalid token" });
+    }
+    
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Unauthorized - Token expired" });
+    }
+    
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-const isAdmin = async (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+// Admin authentication
+exports.adminAuth = async (req, res, next) => {
+  try {
+    // Check for token
+    if (!req.headers.authorization || !req.headers.authorization.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized - No token provided" });
+    }
+
+    // Extract token
+    const token = req.headers.authorization.split(" ")[1];
+    
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if admin exists
+    const admin = await Admin.findById(decoded.id);
+    if (!admin) {
+      return res.status(401).json({ message: "Unauthorized - Admin not found" });
+    }
+    
+    // Add admin to request
+    req.admin = admin;
     next();
-  } else {
-    res.status(403).json({ message: 'Access denied. Admin only.' });
+  } catch (error) {
+    console.error("Admin Auth Error:", error);
+    
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Unauthorized - Invalid token" });
+    }
+    
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Unauthorized - Token expired" });
+    }
+    
+    res.status(500).json({ message: "Server error" });
   }
 };
-
-module.exports = { auth, isAdmin }; 

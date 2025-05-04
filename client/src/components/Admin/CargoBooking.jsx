@@ -1,222 +1,409 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from '../../axiosConfig';
+import { ArrowLeft, RefreshCw, Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const CargoBooking = () => {
-  // Sample cargo data
-  const [cargoBookings, setCargoBookings] = useState([
-    { id: 1, trackingNumber: 'CRG001', weight: '2500kg', 
-      dimensions: '2.5m x 1.8m x 1.5m', destination: 'New York', 
-      airline: 'SkyWings Airlines', status: 'In Transit', 
-      shipper: 'Global Logistics', consignee: 'Amazon Inc.' },
-    { id: 2, trackingNumber: 'CRG002', weight: '1800kg', 
-      dimensions: '3m x 2m x 1m', destination: 'London', 
-      airline: 'Ocean Air', status: 'Scheduled',
-      shipper: 'DHL Supply Chain', consignee: 'Tesco PLC' },
-    { id: 3, trackingNumber: 'CRG003', weight: '3200kg', 
-      dimensions: '4m x 2.5m x 2m', destination: 'Tokyo', 
-      airline: 'SkyWings Airlines', status: 'Delivered',
-      shipper: 'FedEx Logistics', consignee: 'Sony Corporation' },
-  ]);
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // State for cargo data
+  const [cargoBookings, setCargoBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // State for cargo details view
   const [selectedCargo, setSelectedCargo] = useState(null);
   const [isViewingCargoDetails, setIsViewingCargoDetails] = useState(false);
 
+  // Fetch all cargo bookings on component mount
+  useEffect(() => {
+    fetchCargoBookings();
+  }, []);
+
+  // Function to fetch all cargo bookings
+  const fetchCargoBookings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get('/cargo', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        setCargoBookings(response.data.cargoBookings);
+      } else {
+        setError('Failed to fetch cargo bookings');
+      }
+    } catch (err) {
+      console.error('Error fetching cargo bookings:', err);
+      setError('An error occurred while fetching cargo bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to fetch cargo details by ID
+  const fetchCargoDetails = async (id) => {
+    setError(null);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get(`/cargo/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        setSelectedCargo(response.data.cargo);
+        setIsViewingCargoDetails(true);
+      } else {
+        setError('Failed to fetch cargo details');
+        setSelectedCargo(null);
+        setIsViewingCargoDetails(false);
+      }
+    } catch (err) {
+      console.error('Error fetching cargo details:', err);
+      setError('An error occurred while fetching cargo details');
+      setSelectedCargo(null);
+      setIsViewingCargoDetails(false);
+    }
+  };
+
   // Handle viewing cargo details
-  const handleViewCargoDetails = (cargo) => {
-    setSelectedCargo(cargo);
-    setIsViewingCargoDetails(true);
+  const handleViewCargoDetails = (cargoId) => {
+    fetchCargoDetails(cargoId);
   };
 
   // Handle back to cargo list
   const handleBackToCargoList = () => {
     setIsViewingCargoDetails(false);
+    setSelectedCargo(null);
+    setError(null); // Clear errors when going back
   };
 
-  // Handle cargo status update
-  const handleUpdateCargoStatus = (id, newStatus) => {
-    const updatedCargo = cargoBookings.map(cargo => 
-      cargo.id === id ? { ...cargo, status: newStatus } : cargo
-    );
-    setCargoBookings(updatedCargo);
-    
-    if (selectedCargo && selectedCargo.id === id) {
-      setSelectedCargo({ ...selectedCargo, status: newStatus });
+  // Navigate to ADF details page
+  const handleViewADFPage = () => {
+    if (selectedCargo && selectedCargo._id) {
+      console.log("DEBUG: Navigating to ADF details page for cargo:", selectedCargo._id);
+      navigate(`/admin/cargo/${selectedCargo._id}/adf-details`);
+    } else {
+      console.error("DEBUG: Cannot navigate, selectedCargo or _id is missing");
+      setError("Cannot view ADF details, cargo information is missing.");
     }
   };
 
-  // Generate shipment history (demo data)
-  const generateShipmentHistory = (cargoId) => {
-    return [
-      { date: '2025-03-15', location: 'New York Airport', status: 'Customs Cleared' },
-      { date: '2025-03-14', location: 'In Transit', status: 'Departed Shanghai' },
-      { date: '2025-03-12', location: 'Shanghai Airport', status: 'Processed for Departure' },
-      { date: '2025-03-10', location: 'Shanghai Warehouse', status: 'Received for Shipping' },
-    ];
+  // Handle cargo status update
+  const handleUpdateCargoStatus = async (id, field, value) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const updateData = { [field]: value };
+
+      const response = await axios.patch(`/cargo/${id}/status`, updateData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        // Update local state
+        if (selectedCargo && selectedCargo._id === id) {
+          setSelectedCargo(prev => ({ ...prev, [field]: value }));
+        }
+
+        // Update the cargo bookings list
+        setCargoBookings(prevBookings =>
+          prevBookings.map(cargo =>
+            cargo._id === id ? { ...cargo, [field]: value } : cargo
+          )
+        );
+      } else {
+        setError('Failed to update cargo status');
+      }
+    } catch (err) {
+      console.error('Error updating cargo status:', err);
+      setError('An error occurred while updating cargo status');
+    }
+  };
+
+  // Handle sending email using mailto:
+  const handleSendEmail = (email) => {
+    if (email) {
+      const subject = `Regarding your Cargo Booking: ${selectedCargo?.trackingNumber || ''}`;
+      const body = `Dear Customer,\n\nPlease find details regarding your cargo booking...\n\nTracking Number: ${selectedCargo?.trackingNumber || 'N/A'}\nStatus: ${selectedCargo?.status || 'N/A'}\n\nBest regards,\nFlightEase Admin`;
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } else {
+      setError("Customer email address is not available.");
+    }
+  };
+
+  // Generate a formatted date - add safety check
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error("Error formatting date:", dateString, error);
+      return 'Date Error';
+    }
+  };
+
+  // Status badge styling helper
+  const getStatusBadgeClass = (status) => {
+    switch(status) {
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'in-transit':
+        return 'bg-blue-100 text-blue-800';
+      case 'accepted':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'requested':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Payment status badge styling helper
+  const getPaymentStatusBadgeClass = (status) => {
+    switch(status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
     <div className="container mx-auto py-6 px-6 pb-16">
-      {!isViewingCargoDetails ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Cargo Bookings</h2>
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            <table className="min-w-full bg-white">
-              <thead className="sticky top-0 bg-white">
-                <tr className="bg-gray-100">
-                  <th className="py-2 px-4 text-left">ID</th>
-                  <th className="py-2 px-4 text-left">Tracking #</th>
-                  <th className="py-2 px-4 text-left">Weight</th>
-                  <th className="py-2 px-4 text-left">Dimensions</th>
-                  <th className="py-2 px-4 text-left">Destination</th>
-                  <th className="py-2 px-4 text-left">Airline</th>
-                  <th className="py-2 px-4 text-left">Status</th>
-                  <th className="py-2 px-4 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cargoBookings.map(cargo => (
-                  <tr key={cargo.id} className="border-t border-gray-200 hover:bg-gray-50">
-                    <td className="py-2 px-4">{cargo.id}</td>
-                    <td className="py-2 px-4">{cargo.trackingNumber}</td>
-                    <td className="py-2 px-4">{cargo.weight}</td>
-                    <td className="py-2 px-4">{cargo.dimensions}</td>
-                    <td className="py-2 px-4">{cargo.destination}</td>
-                    <td className="py-2 px-4">{cargo.airline}</td>
-                    <td className="py-2 px-4">
-                      <span className={`px-2 py-1 rounded text-xs 
-                        ${cargo.status === 'Delivered' ? 'bg-green-100 text-green-800' : 
-                          cargo.status === 'In Transit' ? 'bg-blue-100 text-blue-800' : 
-                          cargo.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'}`}
-                      >
-                        {cargo.status}
-                      </span>
-                    </td>
-                    <td className="py-2 px-4">
-                      <button 
-                        onClick={() => handleViewCargoDetails(cargo)}
-                        className="text-indigo-600 hover:text-indigo-800"
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="font-bold text-lg leading-none">&times;</button>
         </div>
-      ) : (
-        <div>
-          <div className="mb-4">
-            <button 
-              onClick={handleBackToCargoList}
-              className="flex items-center text-indigo-600 hover:text-indigo-800"
+      )}
+
+      {/* Loading state */}
+      {loading && !isViewingCargoDetails && (
+        <div className="flex justify-center items-center h-64">
+          <RefreshCw className="animate-spin h-8 w-8 text-indigo-600" />
+          <span className="ml-2">Loading cargo bookings...</span>
+        </div>
+      )}
+
+      {/* Main content: List View */}
+      {!loading && !isViewingCargoDetails ? (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Cargo Bookings</h2>
+            <button
+              onClick={fetchCargoBookings}
+              className="bg-indigo-50 p-2 rounded hover:bg-indigo-100"
+              disabled={loading}
+              title="Refresh Bookings"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
-              Back to Cargo List
+              <RefreshCw className={`h-5 w-5 text-indigo-600 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Cargo Booking Details</h2>
-              <div className="flex items-center">
-                <span className={`px-3 py-1 rounded text-sm mr-3
-                  ${selectedCargo.status === 'Delivered' ? 'bg-green-100 text-green-800' : 
-                    selectedCargo.status === 'In Transit' ? 'bg-blue-100 text-blue-800' : 
-                    selectedCargo.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'}`}
-                >
-                  {selectedCargo.status}
-                </span>
-                <select
-                  className="border border-gray-300 rounded p-1 text-sm"
-                  value={selectedCargo.status}
-                  onChange={(e) => handleUpdateCargoStatus(selectedCargo.id, e.target.value)}
-                >
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="In Transit">In Transit</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="On Hold">On Hold</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
+          {cargoBookings.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No cargo bookings found
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <h3 className="text-lg font-medium mb-4">Shipment Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Tracking Number</p>
-                    <p className="font-medium">{selectedCargo.trackingNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Weight</p>
-                    <p className="font-medium">{selectedCargo.weight}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Dimensions</p>
-                    <p className="font-medium">{selectedCargo.dimensions}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Airline</p>
-                    <p className="font-medium">{selectedCargo.airline}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Parties Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Shipper</p>
-                    <p className="font-medium">{selectedCargo.shipper}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Consignee</p>
-                    <p className="font-medium">{selectedCargo.consignee}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Destination</p>
-                    <p className="font-medium">{selectedCargo.destination}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium mb-4">Shipment History</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="py-2 px-4 text-left border-b">Date</th>
-                      <th className="py-2 px-4 text-left border-b">Location</th>
-                      <th className="py-2 px-4 text-left border-b">Status</th>
+          ) : (
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="min-w-full bg-white">
+                <thead className="sticky top-0 bg-white z-10">
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4 text-left">Tracking #</th>
+                    <th className="py-2 px-4 text-left">From</th>
+                    <th className="py-2 px-4 text-left">To</th>
+                    <th className="py-2 px-4 text-left">Weight</th>
+                    <th className="py-2 px-4 text-left">Type</th>
+                    <th className="py-2 px-4 text-left">Status</th>
+                    <th className="py-2 px-4 text-left">Payment</th>
+                    <th className="py-2 px-4 text-left">Date</th>
+                    <th className="py-2 px-4 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cargoBookings.map(cargo => (
+                    <tr key={cargo._id} className="border-t border-gray-200 hover:bg-gray-50">
+                      <td className="py-2 px-4">{cargo.trackingNumber}</td>
+                      <td className="py-2 px-4">{cargo.from}</td>
+                      <td className="py-2 px-4">{cargo.to}</td>
+                      <td className="py-2 px-4">{cargo.weight} kg</td>
+                      <td className="py-2 px-4">{cargo.type}</td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded text-xs ${getStatusBadgeClass(cargo.status)}`}>
+                          {cargo.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded text-xs ${getPaymentStatusBadgeClass(cargo.paymentStatus)}`}>
+                          {cargo.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4">{formatDate(cargo.createdAt)}</td>
+                      <td className="py-2 px-4">
+                        <button
+                          onClick={() => handleViewCargoDetails(cargo._id)}
+                          className="text-indigo-600 hover:text-indigo-800"
+                        >
+                          View Details
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {generateShipmentHistory(selectedCargo.id).map((event, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-2 px-4 border-b">{event.date}</td>
-                        <td className="py-2 px-4 border-b">{event.location}</td>
-                        <td className="py-2 px-4 border-b">
-                          <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                            {event.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        // Cargo Details View
+        selectedCargo && (
+          <div>
+            <div className="mb-4">
+              <button
+                onClick={handleBackToCargoList}
+                className="flex items-center text-indigo-600 hover:text-indigo-800"
+              >
+                <ArrowLeft className="h-5 w-5 mr-1" />
+                Back to Cargo List
+              </button>
+            </div>
+            {/* Cargo Details Box */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">Cargo Booking Details</h2>
+                <div className="flex items-center space-x-2">
+                  {/* Status Badge */}
+                  <span className={`px-3 py-1 rounded text-sm ${getStatusBadgeClass(selectedCargo.status)}`}>
+                    {selectedCargo.status}
+                  </span>
+
+                  {/* Status Update Dropdown */}
+                  <select
+                    className="border border-gray-300 rounded p-1 text-sm"
+                    value={selectedCargo.status}
+                    onChange={(e) => handleUpdateCargoStatus(selectedCargo._id, 'status', e.target.value)}
+                  >
+                    <option value="requested">Requested</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="in-transit">In Transit</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+
+                  {/* Payment Status Update Dropdown */}
+                  <select
+                    className="border border-gray-300 rounded p-1 text-sm ml-2"
+                    value={selectedCargo.paymentStatus}
+                    onChange={(e) => handleUpdateCargoStatus(selectedCargo._id, 'paymentStatus', e.target.value)}
+                  >
+                    <option value="pending">Payment Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Shipment Information */}
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Shipment Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Tracking Number</p>
+                      <p className="font-medium">{selectedCargo.trackingNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Weight</p>
+                      <p className="font-medium">{selectedCargo.weight} kg</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Dimensions</p>
+                      <p className="font-medium">{selectedCargo.dimensions || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Type</p>
+                      <p className="font-medium capitalize">{selectedCargo.type}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Shipping Date</p>
+                      <p className="font-medium">{formatDate(selectedCargo.date)}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Route Information */}
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Route Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-500">From</p>
+                      <p className="font-medium">{selectedCargo.from}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">To</p>
+                      <p className="font-medium">{selectedCargo.to}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Customer</p>
+                      <p className="font-medium">
+                        {selectedCargo.userId ?
+                          `${selectedCargo.userId.firstName} ${selectedCargo.userId.lastName}` :
+                          'Not assigned'}
+                      </p>
+                    </div>
+                    {/* Customer Email with Send Button */}
+                    <div>
+                      <p className="text-sm text-gray-500">Customer Email</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="font-medium">{selectedCargo.userId?.email || 'N/A'}</p>
+                        {selectedCargo.userId?.email && (
+                          <button
+                            onClick={() => handleSendEmail(selectedCargo.userId.email)}
+                            className="p-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                            title={`Send email to ${selectedCargo.userId.email}`}
+                          >
+                            <Mail size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Description</p>
+                      <p className="font-medium">{selectedCargo.description || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ADF Button - Updated */}
+              <div className="border-t pt-4">
+                 <button
+                    onClick={handleViewADFPage} // Use the updated handler
+                    className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+                    disabled={!selectedCargo} // Disable if no cargo selected
+                  >
+                    View ADF Details Page {/* Updated Button Text */}
+                  </button>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );

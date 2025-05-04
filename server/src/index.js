@@ -13,18 +13,25 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
-// app.use('/api/flights', require('./routes/flight.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/contact', require('./routes/contact.routes'));
+app.use('/api/flights', require('./routes/flight.routes'));
+app.use('/api/passenger', require('./routes/passenger.routes'));
+app.use('/api/seats', require('./routes/seat.routes'));
+app.use('/api/search', require('./routes/search.routes'));
+
+app.use('/api/cargo', require('./routes/cargo.routes'));
 // app.use('/api/bookings', require('./routes/booking.routes'));
-// app.use('/api/seats', require('./routes/seat.routes'));
 // app.use('/api/cargo', require('./routes/cargo.routes'));
+
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/flight-ease', {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB Connected'))
-.catch(err => console.error('MongoDB Connection Error:', err));
+  .then(() => console.log('MongoDB Connected'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -32,7 +39,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});

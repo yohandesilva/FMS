@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Package, MapPin, Calendar, Weight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from '../../axiosConfig';
 
 function CargoBooking() {
   const navigate = useNavigate();
@@ -13,12 +14,48 @@ function CargoBooking() {
     type: 'general',
     description: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Cargo booking submitted:', formData);
-    // Navigate to the acceptance declaration page
-    navigate('/acceptance-declaration', { state: { formData } });
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // Redirect to login if no token is found
+        navigate('/login', { 
+          state: { message: 'Please log in to book cargo shipments' }
+        });
+        return;
+      }
+      
+      // Send POST request to create cargo booking
+      const response = await axios.post('/cargo', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log('Cargo booking submitted successfully:', response.data);
+      
+      // Navigate to the acceptance declaration page with cargo ID
+      navigate('/acceptance-declaration', { 
+        state: { 
+          formData,
+          cargoId: response.data.cargo._id
+        }
+      });
+    } catch (err) {
+      console.error('Error submitting cargo booking:', err);
+      setError(err.response?.data?.message || 'Failed to submit cargo booking. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -32,6 +69,12 @@ function CargoBooking() {
         <h1 className="text-3xl font-bold text-center text-blue-800 mb-8">
           Cargo Booking
         </h1>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md border border-green-200">
           <div className="grid md:grid-cols-2 gap-4">
@@ -132,8 +175,9 @@ function CargoBooking() {
           <button
             type="submit"
             className="w-full mt-6 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 transition-colors"
+            disabled={loading}
           >
-            Request Cargo Booking
+            {loading ? "Processing..." : "Request Cargo Booking"}
           </button>
         </form>
       </div>

@@ -5,7 +5,7 @@ import axios from "../../axiosConfig";
 const PassengerDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const flight_id = location.state?.flight_id; // Get flight_id from state
+  const { flight_id, flightPrice, tripType } = location.state || {};
 
   const [formData, setFormData] = useState({
     title: "",
@@ -25,6 +25,12 @@ const PassengerDetails = () => {
     nationalityCountryCode: "",
     issuingCountryCode: "",
     expirationDate: "",
+    dobDay: "",
+    dobMonth: "",
+    dobYear: "",
+    expDay: "",
+    expMonth: "",
+    expYear: "",
   });
 
   const handleChange = (e) => {
@@ -43,6 +49,12 @@ const PassengerDetails = () => {
       "email",
       "documentType",
       "documentNumber",
+      "dobDay",
+      "dobMonth",
+      "dobYear",
+      "expDay",
+      "expMonth",
+      "expYear",
     ];
     const missingFields = requiredFields.filter((field) => !formData[field]);
 
@@ -54,29 +66,46 @@ const PassengerDetails = () => {
       );
       return false;
     }
+    if (isNaN(new Date(`${formData.dobYear}-${formData.dobMonth}-${formData.dobDay}`))) {
+      alert("Please enter a valid Date of Birth.");
+      return false;
+    }
+    if (isNaN(new Date(`${formData.expYear}-${formData.expMonth}-${formData.expDay}`))) {
+      alert("Please enter a valid Expiration Date.");
+      return false;
+    }
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Combine dobDay, dobMonth, and dobYear into dateOfBirth
-    const dateOfBirth = new Date(
-      `${formData.dobYear}-${formData.dobMonth}-${formData.dobDay}`
-    );
+    if (!validateForm()) {
+      return;
+    }
 
-    // Combine expDay, expMonth, and expYear into expirationDate
-    const expirationDate = new Date(
-      `${formData.expYear}-${formData.expMonth}-${formData.expDay}`
-    );
+    if (!flight_id) {
+      alert("Flight information is missing. Please go back and select a flight.");
+      console.error("Error: flight_id is missing in PassengerDetails handleSubmit");
+      return;
+    }
 
-    // Update formData with the combined fields and flight_id
+    const dateOfBirth = `${formData.dobYear}-${String(formData.dobMonth).padStart(2, '0')}-${String(formData.dobDay).padStart(2, '0')}`;
+    const expirationDate = `${formData.expYear}-${String(formData.expMonth).padStart(2, '0')}-${String(formData.expDay).padStart(2, '0')}`;
+
     const updatedFormData = {
       ...formData,
       dateOfBirth,
       expirationDate,
-      flight_id, // Include flight_id in the request
+      flight_id,
     };
+
+    delete updatedFormData.dobDay;
+    delete updatedFormData.dobMonth;
+    delete updatedFormData.dobYear;
+    delete updatedFormData.expDay;
+    delete updatedFormData.expMonth;
+    delete updatedFormData.expYear;
 
     try {
       const token =
@@ -88,6 +117,7 @@ const PassengerDetails = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -97,14 +127,23 @@ const PassengerDetails = () => {
         navigate("/booking-seats", {
           state: {
             flight_id,
-            passenger_id: response.data.passenger_id, // Use passenger_id from the backend response
+            passenger_id: response.data.passenger_id,
+            flightPrice,
+            tripType,
           },
         });
-        console.log(flight_id, response.data.passenger_id); /////
+        console.log("Navigating to BookSeat with:", {
+          flight_id,
+          passenger_id: response.data.passenger_id,
+          flightPrice,
+          tripType,
+        });
+      } else {
+        alert(response.data.message || "Failed to save passenger details. Please try again.");
       }
     } catch (error) {
-      console.error("Error saving passenger details:", error);
-      alert("Failed to save passenger details. Please try again.");
+      console.error("Error saving passenger details:", error.response?.data || error.message);
+      alert(error.response?.data?.message || "An error occurred while saving passenger details. Please try again.");
     }
   };
 
@@ -309,13 +348,15 @@ const PassengerDetails = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date of Birth
+                Date of Birth *
               </label>
               <div className="flex space-x-2">
                 <select
                   name="dobDay"
+                  value={formData.dobDay}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Day</option>
                   {[...Array(31)].map((_, i) => (
@@ -326,8 +367,10 @@ const PassengerDetails = () => {
                 </select>
                 <select
                   name="dobMonth"
+                  value={formData.dobMonth}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Month</option>
                   {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(
@@ -340,8 +383,10 @@ const PassengerDetails = () => {
                 </select>
                 <select
                   name="dobYear"
+                  value={formData.dobYear}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Year</option>
                   {[...Array(100)].map((_, i) => {
@@ -433,13 +478,15 @@ const PassengerDetails = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Expiration Date
+                Expiration Date *
               </label>
               <div className="flex space-x-2">
                 <select
                   name="expDay"
+                  value={formData.expDay}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Day</option>
                   {[...Array(31)].map((_, i) => (
@@ -450,8 +497,10 @@ const PassengerDetails = () => {
                 </select>
                 <select
                   name="expMonth"
+                  value={formData.expMonth}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Month</option>
                   {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(
@@ -464,8 +513,10 @@ const PassengerDetails = () => {
                 </select>
                 <select
                   name="expYear"
+                  value={formData.expYear}
                   className="w-1/3 border border-gray-300 rounded-md p-2"
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Year</option>
                   {[...Array(30)].map((_, i) => {
@@ -487,7 +538,7 @@ const PassengerDetails = () => {
             type="submit"
             className="bg-blue-600 text-white px-8 py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Submit
+            Save and Continue to Seat Selection
           </button>
         </div>
       </form>

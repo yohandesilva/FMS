@@ -1,15 +1,10 @@
-const express = require('express');
+const express = require("express");
+const { getSeats, selectSeat, getPassengerSeat } = require("../controllers/seatController");
+
 const router = express.Router();
 
-// Seat routes
-router.get('/flight/:flightId', (req, res) => {
-  // TODO: Implement get seats for flight
-  res.json({ message: 'Get seats for flight endpoint' });
-});
+router.get("/:flight_id", getSeats); // Get seats for a flight
+router.post("/select", selectSeat); // Select a seat
+router.get("/passenger/:flight_id/:passenger_id", getPassengerSeat); // Get a passenger's seat
 
-router.post('/reserve', (req, res) => {
-  // TODO: Implement seat reservation
-  res.json({ message: 'Reserve seat endpoint' });
-});
-
-module.exports = router; 
+module.exports = router;
